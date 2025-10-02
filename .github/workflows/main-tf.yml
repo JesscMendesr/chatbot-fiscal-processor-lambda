@@ -1,0 +1,48 @@
+# Arquivo: .github/workflows/main-tf.yml
+name: CI/CD AWS Lambda com Terraform
+
+on:
+  # O pipeline roda automaticamente em push para o branch main
+  push:
+    branches:
+      - main
+      
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Permite o login seguro (OIDC)
+      contents: read
+      
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      # 1. Configura a Autenticação Segura (OIDC) com AWS
+      # ESTA ETAPA USA O SEGREDO QUE CONTÉM O ARN!
+      - name: Configurar AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # O segredo AWS_DEPLOY_ROLE_ARN armazena o ARN do seu IAM Role
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-2 # Usamos a mesma região definida no main.tf
+
+      # 2. Configuração do Terraform
+      - name: Configurar Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+
+      # 3. Inicializa o Terraform (vai dar erro se o backend.tf não for criado!)
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      # 4. Gera o Plano (o que será alterado)
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -out=tfplan
+
+      # 5. Aplica o Plano (Deployment)
+      - name: Terraform Apply
+        id: apply
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan
