@@ -33,10 +33,10 @@ jobs:
 
       # --- ETAPAS DE QUALIDADE DO CÓDIGO (CI) ---
       
-      # 3. Verificar Formatação (Se falhar, o código .tf precisa de 'terraform fmt')
-      # - name: Terraform Format Check # COMENTADO TEMPORARIAMENTE
-      #   id: fmt
-      #   run: terraform fmt -check
+      # 3. Verificar Formatação (Garante padrões de código)
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check
 
       # 4. Inicializar Terraform (Baixa dependências e configura o backend S3)
       - name: Terraform Init
@@ -48,15 +48,6 @@ jobs:
         id: validate
         run: terraform validate
       
-      # 5.1. ETAPA TEMPORÁRIA: Importar recurso existente (Para correções únicas)
-      # **APAGUE ESTE BLOCO APÓS O PRIMEIRO PUSH DE SUCESSO.**
-      - name: Terraform Import da Lambda Existente
-        id: import
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          # O nome do recurso na AWS é chatbot-fiscal-processor7
-          terraform import aws_lambda_function.minha_funcao_tf chatbot-fiscal-processor || true
-          
       # --- ETAPA DE PLANEJAMENTO (CI/CD) ---
         
       # 6. Gera o Plano
