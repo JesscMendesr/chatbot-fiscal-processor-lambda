@@ -55,7 +55,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           # O nome do recurso na AWS é chatbot-fiscal-processor7
-          terraform import aws_lambda_function.minha_funcao_tf chatbot-fiscal-processor7 || true
+          terraform import aws_lambda_function.minha_funcao_tf chatbot-fiscal-processor || true
           
       # --- ETAPA DE PLANEJAMENTO (CI/CD) ---
         
