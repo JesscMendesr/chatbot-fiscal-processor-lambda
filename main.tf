@@ -35,7 +35,7 @@ resource "aws_iam_role_policy_attachment" "lambda_policy" {
 # 4. Define a função AWS Lambda
 resource "aws_lambda_function" "minha_funcao_tf" {
   filename         = data.archive_file.lambda_zip.output_path
-  function_name    = "MinhaFuncaoTerraform"
+  function_name    = "chatbot-fiscal-processor"
   role             = aws_iam_role.lambda_exec_role.arn
   handler          = "app.lambda_handler" # Ex: nome_arquivo.nome_funcao
   runtime          = "python3.13"          # SUBSTITUA pela sua linguagem (nodejs18.x, java17, etc.)
