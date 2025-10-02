@@ -18,6 +18,9 @@ jobs:
   terraform:
     name: 'Terraform Plan & Apply'
     runs-on: ubuntu-latest
+    permissions: # PERMISSÕES PARA O OIDC
+      id-token: write # Permite gerar o JWT necessário para assumir o Role na AWS
+      contents: read  # Permissão padrão para fazer o checkout do código
     
     steps:
     - name: Checkout Code
