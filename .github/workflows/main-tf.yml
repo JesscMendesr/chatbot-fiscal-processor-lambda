@@ -45,22 +45,12 @@ jobs:
       id: init
       run: terraform init
 
-    # 5. ETAPA TEMPORÁRIA: Re-importar a função existente (REMOVER APÓS O SUCESSO)
-    - name: 5.1. Forçar Remoção de Estado e Re-Importar Função
-      id: import_lambda
-      run: |
-        # 1. Tenta remover o recurso do estado. O '|| true' garante que o pipeline não pare se o recurso já não estiver no estado.
-        terraform state rm aws_lambda_function.minha_funcao_tf || true
-        # 2. Re-importa o recurso existente para garantir a sincronização.
-        terraform import -no-color -input=false aws_lambda_function.minha_funcao_tf chatbot-fiscal-processor
-        # OBS: Remova este passo inteiro após o sucesso!
-
-    # 6. Gera o Plano (Plan)
+    # 5. Gera o Plano (Plan)
     - name: Terraform Plan
       id: plan
       run: terraform plan -no-color -input=false -out=tfplan
       
-    # 7. Aplica o Plano (Apply) - Apenas na branch main
+    # 6. Aplica o Plano (Apply) - Apenas na branch main
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: terraform apply -auto-approve tfplan
