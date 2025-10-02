@@ -21,7 +21,7 @@ textract_client = boto3.client('textract', region_name='us-east-2')
 dynamodb = boto3.resource('dynamodb', region_name='us-east-2')
 
 # --- FUNÇÕES AUXILIARES ---
-# ---- TESTE DE DEPLOY NA AWS ----
+# FORCING DEPLOY 2025-10-02
 
 def send_whatsapp_message(to_number, text):
     """Envia uma mensagem de texto via WhatsApp."""
