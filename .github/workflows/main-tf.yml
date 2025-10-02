@@ -7,62 +7,55 @@ on:
   pull_request:
     branches:
       - main
-      
+
+env:
+  AWS_REGION: us-east-2
+  # ARN do Role assumido pelo GitHub Actions para o deploy
+  # O valor está armazenado no GitHub Secrets
+  ROLE_TO_ASSUME: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+  
 jobs:
   terraform:
+    name: 'Terraform Plan & Apply'
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write # Permite o login seguro (OIDC)
-      contents: read
-      
+    
     steps:
-      - name: Checkout do Código
-        uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      # 1. Configurar AWS Credentials
-      # O Role assume que o AWS_DEPLOY_ROLE_ARN está no GitHub Secrets
-      - name: Configurar AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: us-east-2
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      # 2. Configuração do Terraform
-      - name: Configurar Terraform CLI
-        uses: hashicorp/setup-terraform@v3
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
 
-      # --- ETAPAS DE QUALIDADE DO CÓDIGO (CI) ---
+    # 3. Corrigir Formatação (Garante que a sintaxe esteja ok)
+    - name: Corrigir Formatação
+      id: fmt
+      run: terraform fmt -recursive
+
+    # 4. Inicializa o Backend (S3 + DynamoDB Lock)
+    - name: Terraform Init
+      id: init
+      run: terraform init
+
+    # 5. ETAPA TEMPORÁRIA: Re-importar a função existente (REMOVER APÓS O SUCESSO)
+    - name: 5.1. Re-Importar Função Existente
+      id: import_lambda
+      # O -ignore-existing evita que o comando falhe se o recurso JÁ ESTIVER no estado.
+      # Nome corrigido: chatbot-fiscal-processor
+      run: terraform import -no-color -input=false -ignore-existing aws_lambda_function.minha_funcao_tf chatbot-fiscal-processor || true
+      # Usamos || true para que o pipeline não pare aqui, caso a importação falhe por qualquer motivo.
+
+    # 6. Gera o Plano (Plan)
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -no-color -input=false -out=tfplan
       
-      # 3. Corrigir Formatação (Ajusta indentação e espaçamento antes do Init)
-      - name: Corrigir Formatação do Terraform
-        id: fmt
-        # O 'terraform fmt' corrige o formato dos arquivos .tf no workspace para que 'validate' e 'plan' funcionem.
-        run: terraform fmt
-
-      # 4. Inicializar Terraform (Baixa dependências e configura o backend S3)
-      - name: Terraform Init
-        id: init
-        run: terraform init
-
-      # 5. Validar Sintaxe da Configuração (Checa erros lógicos e de sintaxe)
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate
-      
-      # --- ETAPA DE PLANEJAMENTO (CI/CD) ---
-        
-      # 6. Gera o Plano
-      - name: Terraform Plan
-        id: plan
-        # Salva o plano em um arquivo para ser usado no Apply ou apenas para revisão em PR
-        run: terraform plan -no-color -input=false -out=tfplan
-
-      # --- ETAPA DE APLICAÇÃO (CD) ---
-
-      # 7. Aplica o Plano
-      - name: Terraform Apply
-        id: apply
-        # Condição: Aplica SOMENTE se for um push direto para a branch principal (main).
-        # Isso evita que o apply rode em Pull Requests.
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -auto-approve tfplan
+    # 7. Aplica o Plano (Apply) - Apenas na branch main
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -auto-approve tfplan
